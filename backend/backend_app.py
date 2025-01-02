@@ -36,7 +36,6 @@ def add_post():
 
     return jsonify(new_post), 201
 
-
 def _validate_add_post(data: dict):
     missing_fields = []
     if not data.get("title"):
@@ -50,10 +49,28 @@ def _validate_add_post(data: dict):
             "message": f"Missing fields: {', '.join(missing_fields)}"
         }), 400
     return None  # No errors
-
-
 def get_new_id(posts) -> int:
     return max([post["id"] for post in posts], default=0) + 1
+
+
+
+@app.route("/api/posts/<int:id>", methods=["DELETE"])
+def delete_post(id):
+
+    post_to_delete = next((post for post in POSTS if post["id"] == id), None)
+
+    if post_to_delete is None:
+        return jsonify({
+            "error": "Not Found",
+            "message": f"Post with id {id} was not found."
+        }), 404
+
+    POSTS.remove(post_to_delete)
+
+    return jsonify({
+        "message": f"Post with id {id} has been deleted successfully."
+    }), 200
+
 
 
 if __name__ == '__main__':
