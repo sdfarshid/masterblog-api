@@ -1,4 +1,5 @@
 import json
+from typing import Union
 
 from flask import Flask, jsonify, request
 from flask_cors import CORS
@@ -36,6 +37,7 @@ def add_post():
 
     return jsonify(new_post), 201
 
+
 def _validate_add_post(data: dict):
     missing_fields = []
     if not data.get("title"):
@@ -49,15 +51,15 @@ def _validate_add_post(data: dict):
             "message": f"Missing fields: {', '.join(missing_fields)}"
         }), 400
     return None  # No errors
+
+
 def get_new_id(posts) -> int:
     return max([post["id"] for post in posts], default=0) + 1
 
 
-
 @app.route("/api/posts/<int:id>", methods=["DELETE"])
 def delete_post(id):
-
-    post_to_delete = next((post for post in POSTS if post["id"] == id), None)
+    post_to_delete = fetch_post_by_id(id)
 
     if post_to_delete is None:
         return jsonify({
@@ -71,6 +73,28 @@ def delete_post(id):
         "message": f"Post with id {id} has been deleted successfully."
     }), 200
 
+
+def fetch_post_by_id(post_id: int) -> Union[dict, None]:
+    return next((post for post in POSTS if post["id"] == post_id), None)
+
+
+@app.route("/api/posts/<int:id>", methods=["PUT"])
+def update_post(id):
+    post_to_update = fetch_post_by_id(id)
+
+    if post_to_update is None:
+        return jsonify({
+            "error": "Not Found",
+            "message": f"Post with id {id} was not found."
+        }), 404
+
+    data = request.get_json()
+
+    post_to_update["title"] = data.get("title", post_to_update["title"])
+    post_to_update["content"] = data.get("content", post_to_update["content"])
+
+    # Return the updated post
+    return jsonify(post_to_update), 200
 
 
 if __name__ == '__main__':
