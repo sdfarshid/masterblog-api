@@ -160,7 +160,12 @@ def get_posts():
 
     posts_page = sorted_posts[start:end]
 
-    return jsonify(posts_page)
+    total_posts = len(sorted_posts)
+
+    return jsonify({
+        "total": total_posts,
+        "posts": posts_page
+    })
 
 
 if __name__ == '__main__':
