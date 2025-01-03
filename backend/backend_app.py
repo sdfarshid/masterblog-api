@@ -1,16 +1,41 @@
 import json
 from typing import Union
-
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+from flask_swagger_ui import get_swaggerui_blueprint
+
 
 app = Flask(__name__)
 CORS(app)  # This will enable CORS for all routes
 
 POSTS = [
-    {"id": 1, "title": "First post", "content": "This is the first post."},
-    {"id": 2, "title": "Second post", "content": "This is the second post."},
+    {
+        "id": 1,
+        "title": "My First Blog Post",
+        "content": "This is the content of my first blog post.",
+        "author": "Your Name",
+        "date": "2023-06-07"
+     },
+    {"id": 2,
+     "title": "My Second Blog Post",
+     "content": "This is the content of my second blog post.",
+     "author": "My Name",
+     "date": "2023-06-08"
+     },
 ]
+
+
+SWAGGER_URL = "/api/docs"
+API_URL = "/static/masterblog.json"
+
+swagger_ui_blueprint = get_swaggerui_blueprint(
+    SWAGGER_URL,
+    API_URL,
+    config={
+        'app_name': 'Masterblog API'
+    }
+)
+app.register_blueprint(swagger_ui_blueprint, url_prefix=SWAGGER_URL)
 
 
 @app.route("/api/posts", methods=["POST"])
@@ -26,7 +51,9 @@ def add_post():
     new_post = {
         "id": new_id,
         "title": data.get("title"),
-        "content": data.get("content")
+        "content": data.get("content"),
+        "author": data.get("author"),
+        "date": data.get("date")
     }
     POSTS.append(new_post)
 
@@ -39,6 +66,10 @@ def _validate_add_post(data: dict):
         missing_fields.append("title")
     if not data.get("content"):
         missing_fields.append("content")
+    if not data.get("author"):
+        missing_fields.append("author")
+    if not data.get("date"):
+        missing_fields.append("date")
 
     if missing_fields:
         return jsonify({
@@ -87,6 +118,8 @@ def update_post(id):
 
     post_to_update["title"] = data.get("title", post_to_update["title"])
     post_to_update["content"] = data.get("content", post_to_update["content"])
+    post_to_update["author"] = data.get("author", post_to_update["author"])
+    post_to_update["date"] = data.get("date", post_to_update["date"])
 
     # Return the updated post
     return jsonify(post_to_update), 200
@@ -96,11 +129,15 @@ def update_post(id):
 def search_posts():
     title_query = request.args.get("title", "")
     content_query = request.args.get("content", "")
+    author_query = request.args.get("author", "")
+    date_query = request.args.get("date", "")
 
     matching_posts = [
         post for post in POSTS
         if (title_query and title_query.lower() in post["title"].lower())
            or (content_query and content_query.lower() in post["content"].lower())
+           or (author_query and author_query.lower() in post["author"].lower())
+           or (date_query and date_query.lower() in post["date"].lower())
     ]
 
     return jsonify(matching_posts), 200
@@ -117,7 +154,7 @@ def get_posts():
     start = (page - 1) * per_page
     end = start + per_page
 
-    if sort_field and sort_field not in ['title', 'content']:
+    if sort_field and sort_field not in ['title', 'content', 'author', 'date']:
         return jsonify({"error": "Bad Request", "message": "Invalid sort field. Use 'title' or 'content'."}), 400
     if direction and direction not in ['asc', 'desc']:
         return jsonify({"error": "Bad Request", "message": "Invalid direction. Use 'asc' or 'desc'."}), 400
