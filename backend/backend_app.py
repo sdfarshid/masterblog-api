@@ -4,26 +4,12 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_swagger_ui import get_swaggerui_blueprint
 
+from backend import Storage
 
 app = Flask(__name__)
 CORS(app)  # This will enable CORS for all routes
 
-POSTS = [
-    {
-        "id": 1,
-        "title": "My First Blog Post",
-        "content": "This is the content of my first blog post.",
-        "author": "Your Name",
-        "date": "2023-06-07"
-     },
-    {"id": 2,
-     "title": "My Second Blog Post",
-     "content": "This is the content of my second blog post.",
-     "author": "My Name",
-     "date": "2023-06-08"
-     },
-]
-
+POSTS = Storage.load_json_file()
 
 SWAGGER_URL = "/api/docs"
 API_URL = "/static/masterblog.json"
@@ -57,6 +43,8 @@ def add_post():
     }
     POSTS.append(new_post)
 
+    Storage.write_file(POSTS)
+
     return jsonify(new_post), 201
 
 
@@ -85,7 +73,7 @@ def get_new_id(posts) -> int:
 
 @app.route("/api/posts/<int:id>", methods=["DELETE"])
 def delete_post(id):
-    post_to_delete = fetch_post_by_id(id)
+    index_in_list, post_to_delete = fetch_post_by_id(id)
 
     if post_to_delete is None:
         return jsonify({
@@ -95,18 +83,20 @@ def delete_post(id):
 
     POSTS.remove(post_to_delete)
 
+    Storage.write_file(POSTS)
+
     return jsonify({
         "message": f"Post with id {id} has been deleted successfully."
     }), 200
 
 
-def fetch_post_by_id(post_id: int) -> Union[dict, None]:
-    return next((post for post in POSTS if post["id"] == post_id), None)
+def fetch_post_by_id(post_id: int) -> tuple:
+    return next(((idx, post) for idx, post in enumerate(POSTS) if post["id"] == post_id), (None, None))
 
 
 @app.route("/api/posts/<int:id>", methods=["PUT"])
 def update_post(id):
-    post_to_update = fetch_post_by_id(id)
+    index_in_list,  post_to_update = fetch_post_by_id(id)
 
     if post_to_update is None:
         return jsonify({
@@ -120,6 +110,9 @@ def update_post(id):
     post_to_update["content"] = data.get("content", post_to_update["content"])
     post_to_update["author"] = data.get("author", post_to_update["author"])
     post_to_update["date"] = data.get("date", post_to_update["date"])
+
+    POSTS[index_in_list] = post_to_update
+    Storage.write_file(POSTS)
 
     # Return the updated post
     return jsonify(post_to_update), 200
