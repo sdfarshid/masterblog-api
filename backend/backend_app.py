@@ -111,6 +111,12 @@ def get_posts():
     sort_field = request.args.get('sort')
     direction = request.args.get('direction')
 
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 3, type=int)
+
+    start = (page - 1) * per_page
+    end = start + per_page
+
     if sort_field and sort_field not in ['title', 'content']:
         return jsonify({"error": "Bad Request", "message": "Invalid sort field. Use 'title' or 'content'."}), 400
     if direction and direction not in ['asc', 'desc']:
@@ -122,7 +128,9 @@ def get_posts():
         reverse = True if direction == 'desc' else False
         sorted_posts = sorted(POSTS, key=lambda post: post[sort_field].lower(), reverse=reverse)
 
-    return jsonify(sorted_posts)
+    posts_page = sorted_posts[start:end]
+
+    return jsonify(posts_page)
 
 
 if __name__ == '__main__':
